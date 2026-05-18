@@ -1,0 +1,20 @@
+# Cloned sub-repos
+repos/*
+
+# Local environment
+.env
+.env.local
+
+# Runtime state
+.pids
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
