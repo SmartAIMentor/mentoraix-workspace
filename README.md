@@ -66,24 +66,70 @@ mentoraix-workspace/
 └── README.md
 ```
 
-## 团队工作流
+## 队友快速上手
 
-### 新队友加入
+### 前置条件
 
-```bash
-make setup   # 搞定一切
-make dev     # 跑起来
-```
-
-### 日常开发
-
-在自己的子仓库里正常开发、推送。需要联调时：
+确保本机已安装：`git`、`make`、`Node.js 18+`、`Python 3.12+`、`uv`（Python 包管理）
 
 ```bash
-make pull    # 拉取所有人最新的代码
-make dev     # 重启服务
-make health  # 确认一切正常
+# 检查是否就绪
+git --version && make --version && node -v && python3 -v && uv --version
 ```
+
+### 首次设置（3 分钟）
+
+```bash
+# 1. 克隆 workspace
+git clone git@github.com:SmartAIMentor/mentoraix-workspace.git
+cd mentoraix-workspace
+
+# 2. 一键 clone 所有子仓库 + 安装依赖 + 生成 .env
+make setup
+
+# 3. 填写 API Keys（向 Leon 索要）
+#    必填项：GEMINI_API_KEY、ANTHROPIC_API_KEY
+#    按需填写：CLAWCORE_API_KEY、DEEPSEEK_API_KEY 等
+vim .env
+
+# 4. 启动所有服务
+make dev
+
+# 5. 确认服务正常
+make health
+# 期望输出：4 个服务全部 ✓ Running
+```
+
+启动成功后访问：
+- 前端：http://localhost:3000
+- 后端 API 文档：http://localhost:58888/docs
+
+### 日常开发流程
+
+```
+你的子仓库（独立开发）          workspace（联调）
+─────────────────────          ──────────────
+git checkout -b feat/xxx       make pull      ← 拉取最新代码
+编写代码、提交、推送              make stop      ← 停旧服务
+git push                       make dev       ← 启新服务
+                               make health    ← 确认正常
+```
+
+**关键原则：** 你在自己的子仓库里正常 `git push`，联调时在 workspace 里 `make pull` 拉取所有人的更新。
+
+### 常见问题
+
+**Q: `make setup` 报权限错误？**
+A: 检查是否有 SmartAIMentor 组织的 GitHub 访问权限，确认 SSH key 已配置：`ssh -T git@github.com`
+
+**Q: 某个服务起不来？**
+A: 查看日志：`cat logs/<服务名>.log`（如 `logs/mentoraix.log`）
+
+**Q: 端口被占用？**
+A: `make stop` 停服务，或 `lsof -i :3000` 找到占用的进程手动 kill
+
+**Q: 只想启动某几个服务？**
+A: 目前 `make dev` 启动全部。如需单独启动，直接 cd 进 repos/ 对应目录手动运行即可
 
 ## 子仓库列表
 
