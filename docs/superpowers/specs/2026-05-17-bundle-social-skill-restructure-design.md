@@ -1,8 +1,16 @@
 # Bundle Social SKILL.md 重构设计
 
 **日期**: 2026-05-17
-**状态**: 已审批
+**状态**: 已审批（经 Codex 对抗性评审 + OpenAPI spec 验证后修订）
 **范围**: 重构 `bundle-social-manager` SKILL.md，从单文件 969 行拆分为核心 + references/ 结构
+
+---
+
+## API 验证状态
+
+所有端点路径和字段名已通过 Bundle Social 官方 OpenAPI spec（`https://api.bundle.social/swagger-json`）验证确认。本 spec 中的 API 细节为已验证的事实，不再是假设。
+
+验证结果：集成设计文档（Document A）在所有点上都正确；当前 SKILL.md（Document B）在端点路径、OAuth 端点名、帖子创建字段、Disconnect 方式上均有错误。
 
 ---
 
@@ -23,8 +31,8 @@
 | 决策项 | 选择 | 理由 |
 |--------|------|------|
 | 文件结构 | 核心 SKILL.md + 4 个 references 文件 | 方案 A：核心可独立使用，references 按需加载 |
-| 端点路径 | 统一单数形式 | 与集成设计文档保持一致 |
-| OAuth 端点 | `create-portal-link` | 替换不存在的 `connect-url` |
+| 端点路径 | 统一单数形式 | 已通过 OpenAPI spec 验证确认 |
+| OAuth 端点 | `create-portal-link` | 已通过 OpenAPI spec 验证确认；`connect-url` 不存在 |
 | 代码架构 | 独立 BundleSocialClient 类 | 按集成设计文档，职责分离 |
 | SKILL 定位 | SmartAIMentor 后端实现参考 | 不是通用 Agent Skill |
 | version | 1.1.0 | 从 1.0.0 升级，反映结构变更 |
@@ -128,9 +136,19 @@ GET /api/v1/social-account?teamId=team_abc123
 ```
 
 **步骤 4（Disconnect）**：
+
+按平台类型断开（不是按账号 ID）：
 ```
-DELETE /api/v1/social-account/{socialAccountId}?teamId=team_abc123
+DELETE /api/v1/social-account/disconnect
+Content-Type: application/json
+
+{
+  "type": "TIKTOK",
+  "teamId": "team_abc123"
+}
 ```
+
+可额外使用 `GET /api/v1/social-account/by-type?type=TIKTOK&teamId=team_abc123` 按平台类型查询单个账号。
 
 **步骤 5（Upload Media）**：
 
@@ -143,14 +161,41 @@ teamId: team_abc123
 file: <binary>
 ```
 
+OpenAPI spec 中确认的上传子端点：
+- `POST /api/v1/upload` — 直接上传（multipart）
+- `POST /api/v1/upload/from-url` — URL 方式上传
+- `POST /api/v1/upload/init` — 分块上传初始化
+- `POST /api/v1/upload/finalize` — 分块上传完成
+
 详细的三种上传模式见 `references/upload-guide.md`。
 
 **步骤 6（Create a Post）**：
 
-端点改为单数：
+端点改为单数，使用 `socialAccountTypes`（平台枚举，不是账号 ID）：
 ```
 POST /api/v1/post
+Content-Type: application/json
+
+{
+  "teamId": "team_abc123",
+  "socialAccountTypes": ["TIKTOK", "INSTAGRAM"],
+  "postNow": true,
+  "platforms": {
+    "TIKTOK": {
+      "text": "Check out this! #tiktokmademebuyit",
+      "uploadIds": ["media_abc123"],
+      "type": "VIDEO"
+    },
+    "INSTAGRAM": {
+      "text": "New drop alert! #reels",
+      "uploadIds": ["media_abc123"],
+      "type": "POST"
+    }
+  }
+}
 ```
+
+注意：字段是 `socialAccountTypes`（平台枚举数组如 `["TIKTOK","INSTAGRAM"]`），不是 `socialAccountIds`（账号实例 ID）。API 中不存在 `socialAccountIds` 字段。
 
 **步骤 7-9（Status / Update / Delete）**：
 
@@ -217,6 +262,7 @@ Response:
 ### references/analytics-and-webhooks.md
 
 **来源**：当前 SKILL.md 719-858 行
+**Phase 2**：Analytics 和 Webhooks 不在当前实现范围内（见集成设计文档"后续扩展"章节），但作为参考内容保留。
 **内容**：
 - Get Analytics 端点（参数、响应格式）
 - Sync Analytics 端点
