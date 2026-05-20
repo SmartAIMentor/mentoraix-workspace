@@ -131,6 +131,11 @@ A: `make stop` 停服务，或 `lsof -i :3000` 找到占用的进程手动 kill
 **Q: 只想启动某几个服务？**
 A: 目前 `make dev` 启动全部。如需单独启动，直接 cd 进 repos/ 对应目录手动运行即可
 
+## 深入了解
+
+- **[项目全景指南](docs/PROJECT_GUIDE.md)** — 架构拓扑、各仓库职责、AI 供应商链、数据流、设计决策。5 分钟读懂整个系统。
+- **[设计文档](docs/superpowers/specs/)** — 各功能的设计 spec 和实现计划
+
 ## 子仓库列表
 
 所有仓库均在 [SmartAIMentor](https://github.com/SmartAIMentor) 组织下：
