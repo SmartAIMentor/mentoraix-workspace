@@ -15,7 +15,7 @@ ORG="SmartAIMentor"
 
 # 仓库列表: name = default_branch
 declare -A REPO_BRANCHES=(
-  [mentoraix]=master
+  [mentoraixs]=master
   [ClawCore]=main
   [SmartAIMentor]=main
   [RecSys]=main
@@ -24,7 +24,7 @@ declare -A REPO_BRANCHES=(
   [user-post-skills-set]=main
 )
 
-REPO_NAMES=(mentoraix ClawCore SmartAIMentor RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set)
+REPO_NAMES=(mentoraixs ClawCore SmartAIMentor RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set)
 
 info()  { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 ok()    { echo -e "\033[1;32m[OK]\033[0m $*"; }
@@ -51,11 +51,11 @@ cmd_clone() {
 cmd_install() {
   info "Installing dependencies..."
 
-  # mentoraix (Next.js)
-  if [ -f "$REPOS_DIR/mentoraix/package.json" ]; then
-    info "mentoraix: npm install"
-    (cd "$REPOS_DIR/mentoraix" && npm install)
-    ok "mentoraix dependencies installed"
+  # mentoraixs (Next.js / pnpm)
+  if [ -f "$REPOS_DIR/mentoraixs/package.json" ]; then
+    info "mentoraixs: pnpm install"
+    (cd "$REPOS_DIR/mentoraixs" && pnpm install)
+    ok "mentoraixs dependencies installed"
   fi
 
   # ClawCore (Python/uv)
@@ -149,13 +149,13 @@ cmd_start() {
     ok "ClawCore started (PID $!)"
   fi
 
-  # 4. mentoraix 前端 (:3000) — 最后启动
-  if [ -f "$REPOS_DIR/mentoraix/package.json" ]; then
-    info "Starting mentoraix on :3000..."
-    (cd "$REPOS_DIR/mentoraix" && npm run dev) > "$LOG_DIR/mentoraix.log" 2>&1 &
-    echo "mentoraix:$!" >> "$PID_FILE"
+  # 4. mentoraixs 前端 (:3000) — 最后启动
+  if [ -f "$REPOS_DIR/mentoraixs/package.json" ]; then
+    info "Starting mentoraixs on :3000..."
+    (cd "$REPOS_DIR/mentoraixs" && pnpm dev) > "$LOG_DIR/mentoraixs.log" 2>&1 &
+    echo "mentoraixs:$!" >> "$PID_FILE"
     sleep 3
-    ok "mentoraix started (PID $!)"
+    ok "mentoraixs started (PID $!)"
   fi
 
   ok "All services started. PIDs saved to .pids"

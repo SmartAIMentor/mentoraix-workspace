@@ -25,7 +25,7 @@ mentoraix-workspace/
 | SmartAIMentor 后端 | :58888 | `bash backend/run.sh` |
 | RecSys | :8000 | `python -m app.main` |
 | ClawCore | :8001 | `uv run uvicorn ... --port 8001` |
-| mentoraix 前端 | :3000 | `npm run dev` |
+| mentoraixs 前端 | :3000 | `pnpm dev` |
 
 **端口冲突**：ClawCore 默认 :8000 与 RecSys 冲突，本 workspace 将 ClawCore 映射到 :8001。
 
