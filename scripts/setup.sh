@@ -15,7 +15,7 @@ ORG="SmartAIMentor"
 
 # 仓库列表: name = default_branch
 declare -A REPO_BRANCHES=(
-  [mentoraixs]=master
+  [mentoraixs]=Leroy
   [ClawCore]=main
   [SmartAIMentor]=main
   [RecSys]=main
