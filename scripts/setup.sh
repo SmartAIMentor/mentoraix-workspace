@@ -17,14 +17,14 @@ ORG="SmartAIMentor"
 declare -A REPO_BRANCHES=(
   [mentoraixs]=Leroy
   [ClawCore]=main
-  [SmartAIMentor]=main
+  [publish-service]=main
   [RecSys]=main
   [platform_data_fetcher]=main
   [popularpays-mcp-demo]=main
   [user-post-skills-set]=main
 )
 
-REPO_NAMES=(mentoraixs ClawCore SmartAIMentor RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set)
+REPO_NAMES=(mentoraixs ClawCore publish-service RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set)
 
 info()  { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 ok()    { echo -e "\033[1;32m[OK]\033[0m $*"; }
@@ -65,15 +65,15 @@ cmd_install() {
     ok "ClawCore dependencies installed"
   fi
 
-  # SmartAIMentor (Python)
-  if [ -f "$REPOS_DIR/SmartAIMentor/backend/requirements.txt" ]; then
-    info "SmartAIMentor: pip install"
-    local venv="$REPOS_DIR/SmartAIMentor/.venv"
+  # publish-service (Python)
+  if [ -f "$REPOS_DIR/publish-service/backend/requirements.txt" ]; then
+    info "publish-service: pip install"
+    local venv="$REPOS_DIR/publish-service/.venv"
     if [ ! -d "$venv" ]; then
       python3 -m venv "$venv"
     fi
-    (cd "$REPOS_DIR/SmartAIMentor" && source .venv/bin/activate && pip install -r backend/requirements.txt -q)
-    ok "SmartAIMentor dependencies installed"
+    (cd "$REPOS_DIR/publish-service" && source .venv/bin/activate && pip install -r backend/requirements.txt -q)
+    ok "publish-service dependencies installed"
   fi
 
   # RecSys (Python)
@@ -122,13 +122,13 @@ cmd_start() {
     set +a
   fi
 
-  # 1. SmartAIMentor 后端 (:58888)
-  if [ -f "$REPOS_DIR/SmartAIMentor/backend/run.sh" ]; then
-    info "Starting SmartAIMentor backend on :58888..."
-    (cd "$REPOS_DIR/SmartAIMentor" && bash backend/run.sh) > "$LOG_DIR/smartaimentor.log" 2>&1 &
-    echo "smartaimentor:$!" >> "$PID_FILE"
+  # 1. publish-service 后端 (:58888)
+  if [ -f "$REPOS_DIR/publish-service/backend/run.sh" ]; then
+    info "Starting publish-service backend on :58888..."
+    (cd "$REPOS_DIR/publish-service" && bash backend/run.sh) > "$LOG_DIR/publish-service.log" 2>&1 &
+    echo "publish-service:$!" >> "$PID_FILE"
     sleep 2
-    ok "SmartAIMentor backend started (PID $!)"
+    ok "publish-service backend started (PID $!)"
   fi
 
   # 2. RecSys (:8000)

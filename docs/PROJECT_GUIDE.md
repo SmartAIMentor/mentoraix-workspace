@@ -12,11 +12,11 @@
 用户浏览器 (mobile-first 440px)
   └─ mentoraix (Next.js :3000) ── 五标签页前端
        │
-       ├── SmartAIMentor (FastAPI :58888) ── 黑客松后端
-       │    ├── 聊天（Gemini 意图分类 → 发布 or 回复）
-       │    ├── 发布工作流（Post Bridge → 社媒平台）
-       │    ├── 任务管理（JSON 文件存储）
-       │    └── /api/v1/* 数据契约（当前为硬编码种子数据）
+       ├── publish-service (FastAPI :58888) ── 多平台发布后端
+       │    ├── Bundle Social API 集成（支持 14 个社媒平台）
+       │    ├── 社媒账号绑定 / 解绑
+       │    ├── 视频 / 图文发布工作流
+       │    └── 团队配置管理（teams.json）
        │
        ├── RecSys (Flask :8000) ── 推荐服务
        │    ├── 人设构建（从创作者数据提取关键词/内容支柱）
@@ -44,7 +44,7 @@
 
 ## 仓库详解
 
-### mentoraix — 主前端应用
+### mentoraixs — 主前端应用
 
 **技术栈：** Next.js 16 · React 19 · TypeScript 5 · Tailwind CSS 4
 
@@ -53,7 +53,7 @@
 | 标签 | 路由 | 数据来源 | 说明 |
 |------|------|----------|------|
 | Chat | `/chat` | ClawCore/OrbitAI/DeepSeek | AI 对话，支持流式回复 |
-| Insights | `/insights` | SmartAIMentor + RecSys + TikHub | 趋势、热点、每日卡片 |
+| Insights | `/insights` | RecSys + TikHub | 趋势、热点、每日卡片 |
 | Create | `/create` | 客户端 | 封面生成、脚本创作 |
 | Grow | `/grow` | 客户端 | 增长策略 |
 | Me | `/me` | 客户端 | 个人设置 |
@@ -118,26 +118,22 @@
 
 ---
 
-### SmartAIMentor — 黑客松后端
+### publish-service — 多平台发布后端
 
-**技术栈：** Python 3.13 · FastAPI · Gemini 2.5 Flash · Post Bridge API
+**技术栈：** Python 3.12+ · FastAPI · Pydantic 2 · Bundle Social API
 
-**核心工作流：** 用户发聊天 → Gemini 分类意图 → 如果是发布意图 → 上传媒体到 Post Bridge → 发布到社媒平台。
+**核心工作流：** 创作者绑定社媒账号 → 上传内容 → 通过 Bundle Social API 发布到 TikTok / Instagram / YouTube 等多平台。
 
-**API 路由：**
+**主要功能：**
 
-| 路由 | 用途 |
+| 功能 | 说明 |
 |------|------|
-| `POST /api/chat` | 聊天 + 发布意图检测 |
-| `POST /api/publish` | 直接发布到社媒 |
-| `GET /api/tasks` | 发布任务列表 |
-| `GET /api/v1/mentor/header-card` | 导师卡片信息 |
-| `GET /api/v1/holding-today/{id}` | 每日优先事项 |
-| `GET /api/v1/persona/{id}` | 创作者人设 |
-| `POST /api/v1/trends/recommend` | 趋势推荐 |
-| `POST /api/v1/posts/recommend` | 帖子推荐 |
+| 社媒账号绑定 | OAuth 连接 TikTok、Instagram、YouTube 等平台 |
+| 视频 / 图文发布 | 上传媒体文件，通过 Bundle Social 分发到多平台 |
+| 团队配置 | teams.json 管理创作者团队和 API Key 映射 |
+| 发布工作流 | 状态机管理发布流程（上传 → 审核 → 发布） |
 
-**当前状态：** `/api/v1/*` 端点返回**硬编码种子数据**（硬编码在前端契约服务中）。发布功能走 Post Bridge，正在迁移到 Bundle Social。任务存储为 JSON 文件。
+**当前状态：** 重构自旧 SmartAIMentor 黑客松后端，专注于发布功能。聊天和推荐功能已分别由 ClawCore 和 RecSys 承担。
 
 ---
 
@@ -187,7 +183,7 @@
 
 ---
 
-### creatop-skills — 内容创作技能链（位于 SmartAIMentor 内）
+### creatop-skills — 内容创作技能链（历史，位于旧 SmartAIMentor 内）
 
 6 个 TikTok 内容创作 SKILL.md，形成完整工作流：
 
@@ -216,18 +212,18 @@ ClawCore 可用时走完整管线（记忆 prefetch → prompt 组装 → ReAct 
 
 ### 2. 文件持久化（非数据库）
 
-- mentoraix：聊天历史 → `data/chat-history/{userId}.json`
-- SmartAIMentor：发布任务 → `data/tasks.json`
+- mentoraixs：聊天历史 → `data/chat-history/{userId}.json`
+- publish-service：团队配置 → `backend/data/teams.json`，上传文件 → `backend/data/uploads/`
 - ClawCore：加密 SQLite（唯一使用数据库的组件）
 - RecSys：内存 + 磁盘 JSON
 
 ### 3. 前端数据仍是种子数据
 
-SmartAIMentor 的 `/api/v1/*` 返回硬编码 mock。RecSys 有真实推荐逻辑但未完全与前端打通。
+publish-service 已取代旧后端。RecSys 有真实推荐逻辑但未完全与前端打通。
 
-### 4. 发布后端迁移中
+### 4. 发布后端已重构
 
-从 Post Bridge → Bundle Social（支持 14 个平台），有设计文档但实现未完成。
+旧 SmartAIMentor（黑客松版，含聊天 + 发布 + 任务）已拆分为专注的 publish-service，使用 Bundle Social API 支持多平台发布。聊天功能由 ClawCore 承担。
 
 ### 5. 无 Docker、无 Git Submodule
 
@@ -239,22 +235,21 @@ Shell clone + Makefile 编排，设计文档中预留了未来迁移到 Git Subm
 
 ### 聊天流程
 ```
-用户 → mentoraix /api/chat → provider.ts
+用户 → mentoraixs /api/chat → provider.ts
   → ClawCore 可用? → SSE 流式（带记忆）
   → 否则 → OrbitAI/DeepSeek（OpenAI 兼容接口）
 ```
 
 ### 发布流程
 ```
-用户 → mentoraix /api/publish → SmartAIMentor /api/publish
-  → Post Bridge API → TikTok / Instagram / X
+用户 → mentoraixs → publish-service :58888
+  → Bundle Social API → TikTok / Instagram / YouTube 等多平台
 ```
 
 ### 推荐流程
 ```
-mentoraix Insights 页 → SmartAIMentor /api/v1/*
-  → 部分 → RecSys（趋势、帖子推荐）
-  → 部分 → 硬编码种子数据
+mentoraixs Insights 页 → RecSys
+  → 趋势推荐、帖子推荐、人设构建
 ```
 
 ### 数据采集流程
@@ -272,16 +267,16 @@ platform_data_fetcher → TikHub API → Instagram 数据
 
 | 变量 | 用途 | 使用方 |
 |------|------|--------|
-| `MENTORAIX_API_BASE_URL` | mentoraix → SmartAIMentor（默认 :58888） | mentoraix |
+| `MENTORAIX_API_BASE_URL` | mentoraixs → publish-service（默认 :58888） | mentoraixs |
 | `CLAWCORE_BASE_URL` | mentoraix → ClawCore 智能体 | mentoraix |
-| `GEMINI_API_KEY` | Gemini API | RecSys, SmartAIMentor, mentoraix, platform_data_fetcher |
+| `GEMINI_API_KEY` | Gemini API | RecSys, mentoraixs, platform_data_fetcher |
 | `ANTHROPIC_API_KEY` | Claude API | ClawCore |
 | `MOONSHOT_API_KEY` | Kimi/Moonshot API | ClawCore |
 | `OPENAI_API_KEY` | OpenAI API | ClawCore, mentoraix |
 | `DEEPSEEK_API_KEY` | DeepSeek API | mentoraix |
 | `ORBITAI_API_KEY` | OrbitAI API | mentoraix |
 | `TIKHUB_API_KEY` | TikHub 数据采集 | mentoraix, platform_data_fetcher |
-| `POST_BRIDGE_API_KEY` | 社媒发布（正迁移至 Bundle Social） | SmartAIMentor |
+| `BUNDLE_SOCIAL_API_KEY` | 社媒发布（Bundle Social） | publish-service |
 
 ---
 

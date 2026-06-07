@@ -3,7 +3,6 @@
 ## 概览
 
 这是一个**纯编排仓库**，不含业务代码。通过 Makefile 和 shell 脚本管理 7 个独立子仓库的联调生命周期。
-
 **开始工作前，先读 [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md)** — 5 分钟了解架构拓扑、各仓库职责、AI 供应商链、数据流和设计决策。
 
 ## 仓库结构
@@ -22,7 +21,7 @@ mentoraix-workspace/
 
 | 服务 | 端口 | 启动方式 |
 |------|------|----------|
-| SmartAIMentor 后端 | :58888 | `bash backend/run.sh` |
+| publish-service | :58888 | `bash backend/run.sh` |
 | RecSys | :8000 | `python -m app.main` |
 | ClawCore | :8001 | `uv run uvicorn ... --port 8001` |
 | mentoraixs 前端 | :3000 | `pnpm dev` |
