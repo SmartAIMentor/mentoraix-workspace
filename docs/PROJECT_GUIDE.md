@@ -18,7 +18,7 @@
        │    ├── 视频 / 图文发布工作流
        │    └── 团队配置管理（teams.json）
        │
-       ├── RecSys (Flask :8000) ── 推荐服务
+       ├── mentor-recsys (Flask :8000) ── 推荐服务
        │    ├── 人设构建（从创作者数据提取关键词/内容支柱）
        │    ├── 趋势推荐（关键词 + 时效性 + 相关性打分）
        │    ├── 帖子推荐（多博主内容按人设匹配打分）
@@ -32,7 +32,7 @@
        │    ├── 技能系统（SKILL.md 运行时发现）
        │    └── 飞书机器人适配器
        │
-       ├── platform_data_fetcher ── 数据采集管线
+       ├── (已废弃) ── 数据采集管线
        │    ├── TikHub SDK 采集 Instagram 用户资料/帖子
        │    └── Gemini 多模态媒体分析（视频/图片内容理解）
        │
@@ -53,7 +53,7 @@
 | 标签 | 路由 | 数据来源 | 说明 |
 |------|------|----------|------|
 | Chat | `/chat` | ClawCore/OrbitAI/DeepSeek | AI 对话，支持流式回复 |
-| Insights | `/insights` | RecSys + TikHub | 趋势、热点、每日卡片 |
+| Insights | `/insights` | mentor-recsys + TikHub | 趋势、热点、每日卡片 |
 | Create | `/create` | 客户端 | 封面生成、脚本创作 |
 | Grow | `/grow` | 客户端 | 增长策略 |
 | Me | `/me` | 客户端 | 个人设置 |
@@ -133,11 +133,11 @@
 | 团队配置 | teams.json 管理创作者团队和 API Key 映射 |
 | 发布工作流 | 状态机管理发布流程（上传 → 审核 → 发布） |
 
-**当前状态：** 重构自旧 SmartAIMentor 黑客松后端，专注于发布功能。聊天和推荐功能已分别由 ClawCore 和 RecSys 承担。
+**当前状态：** 重构自旧 SmartAIMentor 黑客松后端，专注于发布功能。聊天和推荐功能已分别由 ClawCore 和 mentor-recsys 承担。
 
 ---
 
-### RecSys — 推荐服务
+### mentor-recsys — 推荐服务
 
 **技术栈：** Python · Flask 3.1 · Pydantic 2
 
@@ -150,7 +150,7 @@
 
 ---
 
-### platform_data_fetcher — 数据采集管线
+### (已废弃) — 数据采集管线
 
 **技术栈：** Python · TikHub SDK · Google Gemini
 
@@ -166,12 +166,12 @@
 
 | 技能 | 调用目标 |
 |------|----------|
-| `creator-hotspot-api` | RecSys 的推荐和市场信息接口 |
+| `creator-hotspot-api` | mentor-recsys 的推荐和市场信息接口 |
 | `instagram-creator-fetch` | Instagram 数据采集 + Gemini 分析 |
 
 ---
 
-### popularpays-mcp-demo — MCP 爬虫演示
+### (已废弃) — MCP 爬虫演示
 
 使用 Playwright MCP SDK 爬取 PopularPays 品牌合作数据。演示级项目。
 
@@ -215,11 +215,11 @@ ClawCore 可用时走完整管线（记忆 prefetch → prompt 组装 → ReAct 
 - mentoraixs：聊天历史 → `data/chat-history/{userId}.json`
 - publish-service：团队配置 → `backend/data/teams.json`，上传文件 → `backend/data/uploads/`
 - ClawCore：加密 SQLite（唯一使用数据库的组件）
-- RecSys：内存 + 磁盘 JSON
+- mentor-recsys：内存 + 磁盘 JSON
 
 ### 3. 前端数据仍是种子数据
 
-publish-service 已取代旧后端。RecSys 有真实推荐逻辑但未完全与前端打通。
+publish-service 已取代旧后端。mentor-recsys 有真实推荐逻辑但未完全与前端打通。
 
 ### 4. 发布后端已重构
 
@@ -248,15 +248,15 @@ Shell clone + Makefile 编排，设计文档中预留了未来迁移到 Git Subm
 
 ### 推荐流程
 ```
-mentoraixs Insights 页 → RecSys
+mentoraixs Insights 页 → mentor-recsys
   → 趋势推荐、帖子推荐、人设构建
 ```
 
 ### 数据采集流程
 ```
-platform_data_fetcher → TikHub API → Instagram 数据
+(已废弃) → TikHub API → Instagram 数据
   → Gemini 多模态分析 → 结构化 JSON
-  → RecSys 消费 → 人设构建 + 推荐
+  → mentor-recsys 消费 → 人设构建 + 推荐
 ```
 
 ---
@@ -269,13 +269,13 @@ platform_data_fetcher → TikHub API → Instagram 数据
 |------|------|--------|
 | `MENTORAIX_API_BASE_URL` | mentoraixs → publish-service（默认 :58888） | mentoraixs |
 | `CLAWCORE_BASE_URL` | mentoraix → ClawCore 智能体 | mentoraix |
-| `GEMINI_API_KEY` | Gemini API | RecSys, mentoraixs, platform_data_fetcher |
+| `GEMINI_API_KEY` | Gemini API | mentor-recsys, mentoraixs, (已废弃) |
 | `ANTHROPIC_API_KEY` | Claude API | ClawCore |
 | `MOONSHOT_API_KEY` | Kimi/Moonshot API | ClawCore |
 | `OPENAI_API_KEY` | OpenAI API | ClawCore, mentoraix |
 | `DEEPSEEK_API_KEY` | DeepSeek API | mentoraix |
 | `ORBITAI_API_KEY` | OrbitAI API | mentoraix |
-| `TIKHUB_API_KEY` | TikHub 数据采集 | mentoraix, platform_data_fetcher |
+| `TIKHUB_API_KEY` | TikHub 数据采集 | mentoraix, (已废弃) |
 | `BUNDLE_SOCIAL_API_KEY` | 社媒发布（Bundle Social） | publish-service |
 
 ---

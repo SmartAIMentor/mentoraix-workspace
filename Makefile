@@ -1,7 +1,7 @@
 .PHONY: setup clone install env dev start stop status health pull clean help
 
 REPO_DIR := $(shell pwd)
-REPOS    := mentoraixs ClawCore publish-service RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set
+REPOS    := mentoraixs ClawCore publish-service mentor-recsys user-post-skills-set
 
 # === 首次设置（clone + 依赖 + .env） ===
 setup: clone install env

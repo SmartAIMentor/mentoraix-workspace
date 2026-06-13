@@ -18,13 +18,11 @@ declare -A REPO_BRANCHES=(
   [mentoraixs]=Leroy
   [ClawCore]=main
   [publish-service]=main
-  [RecSys]=main
-  [platform_data_fetcher]=main
-  [popularpays-mcp-demo]=main
+  [mentor-recsys]=main
   [user-post-skills-set]=main
 )
 
-REPO_NAMES=(mentoraixs ClawCore publish-service RecSys platform_data_fetcher popularpays-mcp-demo user-post-skills-set)
+REPO_NAMES=(mentoraixs ClawCore publish-service mentor-recsys user-post-skills-set)
 
 info()  { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 ok()    { echo -e "\033[1;32m[OK]\033[0m $*"; }
@@ -76,33 +74,15 @@ cmd_install() {
     ok "publish-service dependencies installed"
   fi
 
-  # RecSys (Python)
-  if [ -f "$REPOS_DIR/RecSys/requirements.txt" ]; then
-    info "RecSys: pip install"
-    local venv="$REPOS_DIR/RecSys/.venv"
+  # mentor-recsys (Python)
+  if [ -f "$REPOS_DIR/mentor-recsys/requirements.txt" ]; then
+    info "mentor-recsys: pip install"
+    local venv="$REPOS_DIR/mentor-recsys/.venv"
     if [ ! -d "$venv" ]; then
       python3 -m venv "$venv"
     fi
-    (cd "$REPOS_DIR/RecSys" && source .venv/bin/activate && pip install -r requirements.txt -q)
-    ok "RecSys dependencies installed"
-  fi
-
-  # platform_data_fetcher
-  if [ -f "$REPOS_DIR/platform_data_fetcher/requirements.txt" ]; then
-    info "platform_data_fetcher: pip install"
-    local venv="$REPOS_DIR/platform_data_fetcher/.venv"
-    if [ ! -d "$venv" ]; then
-      python3 -m venv "$venv"
-    fi
-    (cd "$REPOS_DIR/platform_data_fetcher" && source .venv/bin/activate && pip install -r requirements.txt -q)
-    ok "platform_data_fetcher dependencies installed"
-  fi
-
-  # popularpays-mcp-demo (Node.js)
-  if [ -f "$REPOS_DIR/popularpays-mcp-demo/package.json" ]; then
-    info "popularpays-mcp-demo: npm install"
-    (cd "$REPOS_DIR/popularpays-mcp-demo" && npm install)
-    ok "popularpays-mcp-demo dependencies installed"
+    (cd "$REPOS_DIR/mentor-recsys" && source .venv/bin/activate && pip install -r requirements.txt -q)
+    ok "mentor-recsys dependencies installed"
   fi
 
   ok "All dependencies installed"
@@ -131,13 +111,13 @@ cmd_start() {
     ok "publish-service backend started (PID $!)"
   fi
 
-  # 2. RecSys (:8000)
-  if [ -f "$REPOS_DIR/RecSys/app/main.py" ]; then
-    info "Starting RecSys on :8000..."
-    (cd "$REPOS_DIR/RecSys" && python3 -m app.main) > "$LOG_DIR/recsys.log" 2>&1 &
-    echo "recsys:$!" >> "$PID_FILE"
+  # 2. mentor-recsys (:8000)
+  if [ -f "$REPOS_DIR/mentor-recsys/app/main.py" ]; then
+    info "Starting mentor-recsys on :8000..."
+    (cd "$REPOS_DIR/mentor-recsys" && python3 -m app.main) > "$LOG_DIR/mentor-recsys.log" 2>&1 &
+    echo "mentor-recsys:$!" >> "$PID_FILE"
     sleep 1
-    ok "RecSys started (PID $!)"
+    ok "mentor-recsys started (PID $!)"
   fi
 
   # 3. ClawCore (:8001 — 避免与 RecSys 冲突)
@@ -191,7 +171,7 @@ case "${1:-help}" in
   stop)    cmd_stop ;;
   help|*)
     echo "Usage: $0 <clone|install|start|stop>"
-    echo "  clone   — git clone all 7 repos into repos/"
+    echo "  clone   — git clone all 5 repos into repos/"
     echo "  install — install dependencies for each repo"
     echo "  start   — start all services in background"
     echo "  stop    — stop all background services"
