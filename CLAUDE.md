@@ -49,7 +49,7 @@ make pull     # 拉取最新代码
 ## 环境变量
 
 合并自 3 份 .env.example，按服务分区。关键变量：
-- `CLAWCORE_BASE_URL=http://localhost:8001`（不是默认的 8000）
+- `CLAWCORE_BASE_URL=http://localhost:8001`（不是默认的 8000）— mentoraixs 连 ClawCore 的**唯一**变量（主对话框 + legacy 路由共用）；不要再引入 `CLAWCORE_API_URL`（曾混入一份 :8090 副本连不上）
 - `MENTORAIX_API_BASE_URL=http://localhost:58888`
 - 各 API Key 需手动填入 .env
 
