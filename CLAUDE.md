@@ -17,6 +17,10 @@ mentoraix-workspace/
 └── logs/             ← 服务日志（不提交）
 ```
 
+## 仓库根自动探测
+
+`make` / `scripts/setup.sh` 自动探测子仓库位置：默认 `repos/`（标准 clone 位置）；若 `repos/` 为空且父目录存在平铺子仓（本机布局），自动改用父目录。`make root` 查看当前值；可 `REPOS_ROOT=path make ...` 显式覆盖。`status`/`pull` 按 `$(REPOS)` 列表（5 个正式仓）精确遍历；`make clean` 只清 `repos/`，不碰平铺兄弟仓。
+
 ## 服务拓扑
 
 | 服务 | 端口 | 启动方式 |

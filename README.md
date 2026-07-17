@@ -64,6 +64,17 @@ mentoraix-workspace/
 └── README.md
 ```
 
+## 仓库根布局（自动探测）
+
+`make` 和 `scripts/setup.sh` 会自动探测子仓库位置，无需手动配置：
+
+- **标准布局（默认）**：子仓在 `mentoraix-workspace/repos/` 下。新队友 `make setup` 会 clone 到这里。
+- **平铺布局（本机）**：子仓与 `mentoraix-workspace/` 同级（平铺在父目录）。脚本检测到 `repos/` 为空、且父目录存在子仓时，自动改用父目录。
+
+用 `make root` 查看当前生效的仓库根；也可显式覆盖：`REPOS_ROOT=/path make pull`。
+
+> `make clean` 始终只清理标准 `repos/` 目录，不会触碰平铺布局下的兄弟仓库。
+
 ## 队友快速上手
 
 ### 前置条件
