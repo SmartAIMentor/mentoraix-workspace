@@ -41,7 +41,10 @@ make health
 | mentoraixs (Next.js) | 3000 | `SmartAIMentor/Mentoraixs` |
 | publish-service (FastAPI) | 58888 | `SmartAIMentor/publish-service` |
 | mentor-recsys (FastAPI) | 8000 | `SmartAIMentor/mentor-recsys` |
-| ClawCore (FastAPI) | 8001 | `SmartAIMentor/ClawCore` |
+| ClawCore (FastAPI，旧 agent) | 8001 | `SmartAIMentor/ClawCore` |
+
+> **新 agent 栈（Hermes+OpenViking+adapter，功能完备可切换）**：OpenViking `:1933` · Hermes `:8002` · adapter `:8003`。
+> 切换/回滚步骤见 [docs/AGENT-CUTOVER.md](docs/AGENT-CUTOVER.md)（Mentoraixs 改 `CLAWCORE_BASE_URL` 在 :8001↔:8003 间切）。
 
 > ClawCore 默认端口 8000，本 workspace 将其映射到 8001 以避免与 mentor-recsys 冲突。
 
