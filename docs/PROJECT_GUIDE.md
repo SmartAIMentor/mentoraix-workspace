@@ -24,20 +24,18 @@
        │    ├── 帖子推荐（多博主内容按人设匹配打分）
        │    └── 每日热点卡片（holding-today 聚合）
        │
-       ├── ClawCore (FastAPI :8001) ── 智能体核心（最高优先级）
-       │    ├── ReAct 工具调用循环
-       │    ├── 多 LLM 网关（Claude / Kimi / GPT，按用户路由）
-       │    ├── 持久记忆（SQLite + FTS5 全文检索）
-       │    ├── 事实抽取 + 偏好检测（后台进化任务）
-       │    ├── 技能系统（SKILL.md 运行时发现）
-       │    └── 飞书机器人适配器
+       ├── Adapter (:8003) ── 智能体入口（ClawCore 已下线，由 Hermes+OpenViking 承接）
+       │    ├── Hermes (:8002) 无状态执行器
+       │    ├── OpenViking (:1933) 会话/记忆/人格/上下文（官方 SDK）
+       │    ├── /api/chat + /api/sessions（ClawCore 兼容契约）
+       │    └── 多租户隔离（JWT + per-user OV session）
        │
        ├── (已废弃) ── 数据采集管线
        │    ├── TikHub SDK 采集 Instagram 用户资料/帖子
        │    └── Gemini 多模态媒体分析（视频/图片内容理解）
        │
        └── AI 供应商降级链（在 mentoraix provider.ts 中）
-            ClawCore → OrbitAI → DeepSeek → Mock
+            OrbitAI → DeepSeek → Mock
 ```
 
 ---
@@ -268,11 +266,11 @@ mentoraixs Insights 页 → mentor-recsys
 | 变量 | 用途 | 使用方 |
 |------|------|--------|
 | `MENTORAIX_API_BASE_URL` | mentoraixs → publish-service（默认 :58888） | mentoraixs |
-| `CLAWCORE_BASE_URL` | mentoraix → ClawCore 智能体 | mentoraix |
+| `CLAWCORE_BASE_URL` | mentoraix → Adapter(:8003, ClawCore 兼容契约) | mentoraix |
 | `GEMINI_API_KEY` | Gemini API | mentor-recsys, mentoraixs, (已废弃) |
-| `ANTHROPIC_API_KEY` | Claude API | ClawCore |
-| `MOONSHOT_API_KEY` | Kimi/Moonshot API | ClawCore |
-| `OPENAI_API_KEY` | OpenAI API | ClawCore, mentoraix |
+| `ANTHROPIC_API_KEY` | Claude API | (已废弃, 原 ClawCore) |
+| `MOONSHOT_API_KEY` | Kimi/Moonshot API | (已废弃, 原 ClawCore) |
+| `OPENAI_API_KEY` | OpenAI API | mentoraix, Hermes |
 | `DEEPSEEK_API_KEY` | DeepSeek API | mentoraix |
 | `ORBITAI_API_KEY` | OrbitAI API | mentoraix |
 | `TIKHUB_API_KEY` | TikHub 数据采集 | mentoraix, (已废弃) |

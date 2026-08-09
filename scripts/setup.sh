@@ -27,13 +27,12 @@ ORG="SmartAIMentor"
 # 仓库列表: name = default_branch
 declare -A REPO_BRANCHES=(
   [mentoraixs]=Leroy
-  [ClawCore]=main
   [publish-service]=main
   [mentor-recsys]=main
   [user-post-skills-set]=main
 )
 
-REPO_NAMES=(mentoraixs ClawCore publish-service mentor-recsys user-post-skills-set)
+REPO_NAMES=(mentoraixs publish-service mentor-recsys user-post-skills-set)
 
 info()  { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 ok()    { echo -e "\033[1;32m[OK]\033[0m $*"; }
@@ -69,12 +68,7 @@ cmd_install() {
     ok "mentoraixs dependencies installed"
   fi
 
-  # ClawCore (Python/uv)
-  if [ -f "$REPOS_ROOT/ClawCore/pyproject.toml" ]; then
-    info "ClawCore: uv sync"
-    (cd "$REPOS_ROOT/ClawCore" && uv sync)
-    ok "ClawCore dependencies installed"
-  fi
+  # ClawCore removed — decommissioned; replaced by adapter(:8003)+OpenViking.
 
   # publish-service (Python)
   if [ -f "$REPOS_ROOT/publish-service/backend/requirements.txt" ]; then
@@ -133,16 +127,7 @@ cmd_start() {
     ok "mentor-recsys started (PID $!)"
   fi
 
-  # 3. ClawCore (:8001 — 避免与 RecSys 冲突)
-  if [ -f "$REPOS_ROOT/ClawCore/pyproject.toml" ]; then
-    info "Starting ClawCore on :8001..."
-    (cd "$REPOS_ROOT/ClawCore" && uv run uvicorn clawtok.app:create_app --factory --host 0.0.0.0 --port 8001) > "$LOG_DIR/clawcore.log" 2>&1 &
-    echo "clawcore:$!" >> "$PID_FILE"
-    sleep 2
-    ok "ClawCore started (PID $!)"
-  fi
-
-  # 4. mentoraixs 前端 (:3000) — 最后启动
+  # 3. mentoraixs 前端 (:3000) — 最后启动
   if [ -f "$REPOS_ROOT/mentoraixs/package.json" ]; then
     info "Starting mentoraixs on :3000..."
     (cd "$REPOS_ROOT/mentoraixs" && pnpm dev) > "$LOG_DIR/mentoraixs.log" 2>&1 &

@@ -22,7 +22,9 @@ echo ""
 
 check_port "publish-service" "58888" "http://localhost:58888/docs"
 check_port "RecSys"        "8000"  "http://localhost:8000"
-check_port "ClawCore"      "8001"  "http://localhost:8001/api/health"
+check_port "Hermes"        "8002"  "http://localhost:8002/health"
+check_port "Adapter"       "8003"  "http://localhost:8003/health"
+check_port "OpenViking"    "1933"  "http://localhost:1933/health"
 check_port "mentoraixs"     "3000"  "http://localhost:3000"
 
 echo ""

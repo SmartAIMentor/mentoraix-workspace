@@ -1,7 +1,7 @@
 .PHONY: setup clone install env dev start stop status health pull clean root help
 
 REPO_DIR := $(shell pwd)
-REPOS    := mentoraixs ClawCore publish-service mentor-recsys user-post-skills-set
+REPOS    := mentoraixs publish-service mentor-recsys user-post-skills-set
 
 # 仓库根自动探测（零配置，向后兼容）：
 #   - 默认 $(REPO_DIR)/repos —— 队友 `make setup` clone 的标准位置
