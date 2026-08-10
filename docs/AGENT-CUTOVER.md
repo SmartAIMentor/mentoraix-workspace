@@ -1,7 +1,7 @@
 # Agent 框架升级切换指南 (ClawCore → Hermes + OpenViking)
 
 > **给开发者和 AI 助手**：怎么把服务从旧 agent (ClawCore) 切到新栈，以及怎么**把你负责的服务接进新 agent**。
-> 状态：影子栈功能完备 + 端到端验证通过；ClawCore(:8001) 保留作回滚。
+> 状态：**ClawCore 已正式下线**，新栈（Hermes+OpenViking+Adapter）已上线并全面承接。
 
 ---
 
@@ -36,7 +36,7 @@ bash setup.sh            # 建 venv + 生成 ov.conf + root_key（产物都 giti
 |---|---|---|
 | 新栈代码 | `agent-runtime-lab/hermes-clawcore-adapter/` | `ls start.sh stop.sh ov-server/setup.sh` |
 | OpenViking（已部署） | `.../hermes-clawcore-adapter/ov-server/` | `ls ov-server/venv ov-server/ov.conf` |
-| Hermes（含 mcp SDK） | `agent-runtime-lab/hermes-agent/.venv` | `.venv/bin/hermes --version` |
+| Hermes（含 mcp SDK） | `agent-runtime-lab/hermes-agent/.venv` | `ls .venv/bin/hermes` |
 | publish-service（业务后端） | :58888 | `curl -s :58888/api/health` |
 | 密钥 | `~/.hermes/.env`、项目 `.env` | `API_SERVER_KEY`、`Gitee_API_KEY`、stepfun key |
 
@@ -48,27 +48,30 @@ bash setup.sh            # 建 venv + 生成 ov.conf + root_key（产物都 giti
 
 **一键**（推荐，按下表顺序起 + 健康检查 + 存 pid）：
 ```bash
-bash agent-runtime-lab/hermes-clawcore-adapter/start.sh
+bash agent-runtime-lab/hermes-clawcore-adapter/scripts/stack-up.sh
 ```
+该脚本按依赖顺序拉起 **5 个后端**（含业务后端），已在跑自动跳过 + 自动健康检查。也可选择性启动：`ONLY=adapter,hermes` / `SKIP=mentor-recsys`。查状态：`bash .../scripts/stack-status.sh`。
 
 | 序 | 服务 | 端口 | 约 | 健康检查 |
 |---|---|---|---|---|
 | 1 | OpenViking | 1933 | 5s | `curl :1933/health` → `{"healthy":true,"auth_mode":"trusted"}` |
 | 2 | Hermes gateway | 8002 | 15s | `lsof -i:8002` 有进程 |
 | 3 | adapter | 8003 | 5s | `curl :8003/health` → `{"ok":true,...}` |
+| 4 | publish-service | 58888 | 5s | `curl :58888/api/health` |
+| 5 | mentor-recsys | 8000 | 5s | `curl :8000/` |
 
-停：`bash .../stop.sh` ｜ 生产(鉴权)：`DEV_MODE=false JWT_SECRET=<密钥> bash start.sh`
+停：`bash agent-runtime-lab/hermes-clawcore-adapter/stop.sh`（覆盖 5 服务端口）｜ 生产(鉴权)：`DEV_MODE=false JWT_SECRET=<密钥>`（stack-up.sh 已默认生产模式）
 
 ---
 
-## ③ 配置切换
+## ③ 配置（当前状态）
 
-| 文件 | 改什么 | 旧 → 新 |
+| 文件 | 值 | 说明 |
 |---|---|---|
-| `mentoraixs/.env.local` | `CLAWCORE_BASE_URL` | `http://localhost:8001` → `:8003` |
-| `mentoraixs/.env.local` (生产) | 鉴权 | 加 `DEV_MODE=false` + 给 adapter 设 `JWT_SECRET` |
+| `mentoraixs/.env.local` | `CLAWCORE_BASE_URL=http://localhost:8003` | 已切到 Adapter，**勿改回 :8001**（ClawCore 已下线） |
+| `mentoraixs/.env.local` (生产) | 鉴权 | adapter 需 `JWT_SECRET`；`DEV_MODE=false`（stack-up.sh 已默认生产模式） |
 
-改完重启 Mentoraixs。**回滚** = 把 `CLAWCORE_BASE_URL` 改回 `:8001`。
+改完重启 Mentoraixs。**ClawCore(:8001) 已下线，无回滚目标**；如需停新栈用 `agent-runtime-lab/.../stop.sh`。
 
 ---
 
@@ -138,27 +141,23 @@ mcp_servers:
 
 ---
 
-## 回滚（新 → 旧）
+## 回滚说明
 
-```bash
-# 1. Mentoraixs 指回 ClawCore
-CLAWCORE_BASE_URL=http://localhost:8001   # 改 mentoraixs/.env.local，重启 Mentoraixs
-# 2. 确保 ClawCore :8001 在跑
-# 3. 停新栈（可选）
-bash agent-runtime-lab/hermes-clawcore-adapter/stop.sh
-```
+**ClawCore(:8001) 已下线，无回滚目标。** 若新栈异常，可临时降级到直连供应商（OrbitAI/DeepSeek/Mock，改 mentoraixs `CLAWCORE_BASE_URL` 指向不可达地址即可触发降级链），但完整智能体能力会缺失。停新栈：`bash agent-runtime-lab/hermes-clawcore-adapter/stop.sh`。
 
 ---
 
-## 上线前待决策
-- **AGPL 法务**：OpenViking 是 AGPL-3.0；当前 arm's length(HTTP API) 安全，付费上线前法务拍板。
-- **正式退役 ClawCore :8001**：切换稳定运行一段时间后关。
-- **生产化**：systemd/launchd 守护（自启+崩重启）、性能基线（commit/recall P95）。
+## 上线后状态与待办
+- **AGPL 法务** ✅（已过）：OpenViking 是 AGPL-3.0，当前 arm's length(HTTP API) 使用安全。
+- **ClawCore 退役** ✅（已完成）：:8001 已下线，由新栈承接。
+- **生产化** ⏸：systemd/launchd 守护（自启+崩重启）、性能基线（commit/recall P95）。**注意**：后台 nohup 进程在非持久终端会随会话结束被回收，上线应配守护进程。
+- **M 人格注入** ⏸：见 [PERSONA-INJECTION.md](PERSONA-INJECTION.md)（待实施方案）。
 
 ## FAQ
 | 问题 | 排查 |
 |---|---|
 | agent 说"没有这个工具" | `hermes mcp test <name>` 看连上没；Hermes venv 装了 `mcp` 库没 |
-| 端口冲突 | 新栈用 :1933/:8002/:8003，与旧的 :8001/:58888/:3000 不冲突 |
-| OV 数据会丢吗 | 不会，在 `~/.mentoraix/ov-server/data`（持久，重启不丢）|
+| 端口冲突 | 新栈用 :1933/:8002/:8003，业务后端 :58888/:8000，前端 :3000 |
+| OV 数据会丢吗 | 不会，持久存储（重启不丢）|
 | 怎么加新业务工具 | 按 ④ 写 MCP（不用改 Hermes 代码）|
+| skill 调业务接口报 Connection refused | 对应后端没起——`bash .../stack-up.sh` 一键拉起全部后端 |

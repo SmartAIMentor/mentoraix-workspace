@@ -18,24 +18,21 @@
        │    ├── 视频 / 图文发布工作流
        │    └── 团队配置管理（teams.json）
        │
-       ├── mentor-recsys (Flask :8000) ── 推荐服务
+       ├── mentor-recsys (FastAPI :8000) ── Creator Hotspot 推荐服务
        │    ├── 人设构建（从创作者数据提取关键词/内容支柱）
        │    ├── 趋势推荐（关键词 + 时效性 + 相关性打分）
        │    ├── 帖子推荐（多博主内容按人设匹配打分）
        │    └── 每日热点卡片（holding-today 聚合）
        │
        ├── Adapter (:8003) ── 智能体入口（ClawCore 已下线，由 Hermes+OpenViking 承接）
-       │    ├── Hermes (:8002) 无状态执行器
+       │    ├── Hermes (:8002) 无状态执行器（skill 加载/执行引擎）
        │    ├── OpenViking (:1933) 会话/记忆/人格/上下文（官方 SDK）
        │    ├── /api/chat + /api/sessions（ClawCore 兼容契约）
-       │    └── 多租户隔离（JWT + per-user OV session）
-       │
-       ├── (已废弃) ── 数据采集管线
-       │    ├── TikHub SDK 采集 Instagram 用户资料/帖子
-       │    └── Gemini 多模态媒体分析（视频/图片内容理解）
+       │    ├── 多租户隔离（JWT + per-user OV session）
+       │    └── 13 个官方 skill（带脚本的调 publish-service / mentor-recsys）
        │
        └── AI 供应商降级链（在 mentoraix provider.ts 中）
-            OrbitAI → DeepSeek → Mock
+            Adapter(智能体) → OrbitAI → DeepSeek → Mock
 ```
 
 ---
@@ -50,7 +47,7 @@
 
 | 标签 | 路由 | 数据来源 | 说明 |
 |------|------|----------|------|
-| Chat | `/chat` | ClawCore/OrbitAI/DeepSeek | AI 对话，支持流式回复 |
+| Chat | `/chat` | Adapter/Hermes 智能体、OrbitAI/DeepSeek | AI 对话，支持流式回复 |
 | Insights | `/insights` | mentor-recsys + TikHub | 趋势、热点、每日卡片 |
 | Create | `/create` | 客户端 | 封面生成、脚本创作 |
 | Grow | `/grow` | 客户端 | 增长策略 |
@@ -67,52 +64,22 @@
 
 ---
 
-### ClawCore — 智能体核心
+### ClawCore — 智能体核心（已下线）
 
-**技术栈：** Python 3.12+ · FastAPI · aiosqlite · Anthropic/OpenAI SDK
+**技术栈：** Python · FastAPI · aiosqlite · Anthropic/OpenAI SDK
 
-这是整个系统架构最完善的组件（282 个测试用例）。
+> **ClawCore 已 decommissioned（下线）**，能力由 `agent-runtime-lab` 的新智能体栈（Hermes :8002 + OpenViking :1933 + Adapter :8003）承接。前端契约 `/api/chat` + `/api/sessions` 保持不变，由 Adapter 在 :8003 提供 ClawCore 兼容协议，因此前端无需改动。
+>
+> **历史架构（供回滚/追溯参考）**：原 ClawCore 是单体智能体——幂等检查 → UserSession.load（人设 + 近 50 条消息 + 已启用技能）→ PromptBuilder.build → Memory prefetch（FTS5）→ ReActLoop（最多 30 轮：LLM 调用 → 工具执行 → 循环）→ Session.finish（持久化 + 后台进化）。内置 9 个工具（terminal / read_file / write_file / web_search / web_fetch / create_reminder / search_facts / recall_history / skill_view），4 个后台进化 loop（事实抽取 / 轨迹写入 / 偏好修正 / 策略更新）。这些能力现由 OpenViking（多租户记忆）+ Hermes（无状态执行 + skill 引擎）以更可扩展的方式替代。
 
-**请求处理管线：**
+**迁移对照：**
 
-```
-请求进入
-  → 幂等检查（五状态机）
-  → UserSession.load（加载人设文档 + 近 50 条消息 + 已启用技能）
-  → PromptBuilder.build（稳定段优先排列，优化 prompt caching）
-  → Memory prefetch（FTS5 检索相关事实，注入 <memory-context>）
-  → ReActLoop（最多 30 轮迭代：LLM 调用 → 工具执行 → 循环）
-  → Session.finish（持久化消息，入队后台进化任务）
-```
-
-**9 个内置工具：**
-
-| 工具 | 功能 |
-|------|------|
-| `terminal` | 执行 shell 命令（有破坏性操作检测） |
-| `read_file` / `write_file` | 文件读写 |
-| `web_search` / `web_fetch` | DuckDuckGo 搜索 + HTTP 抓取 |
-| `create_reminder` | 定时提醒（cron/一次性） |
-| `search_facts` | FTS5 事实检索 |
-| `recall_history` | FTS5 对话历史检索 |
-| `skill_view` | 渐进式技能内容披露 |
-
-**后台进化系统（4 个任务循环）：**
-- **A Loop** — 事实抽取（从对话中提取结构化事实）
-- **B Loop** — 轨迹写入（快照对话状态）
-- **C Loop** — 偏好修正（检测用户纠正并更新偏好文档）
-- **D Loop** — 策略更新（预留）
-
-**SSE 事件协议：**
-`turn.start` → `message.delta`(流式) → `message.complete` → `turn.end`
-工具调用额外发出 `tool.start` / `tool.progress` / `tool.complete`
-
-**关键设计：**
-- 多用户隔离（所有操作带 user_id）
-- Fernet 加密用户密钥
-- Prompt 段稳定排列（利于 Anthropic prompt caching）
-- 上下文压缩（80% 时触发：head + tail 保留，中间摘要）
-- 安全层：破坏性命令检测、JSON 修复、注入清洗
+| 原 ClawCore 能力 | 现由谁承接 |
+|---|---|
+| FTS5 单库记忆 | OpenViking 多租户记忆（官方 SDK） |
+| 内置业务工具 | 各服务 MCP 接入（Hermes skill / MCP servers） |
+| ReAct LLM 循环 | Hermes 无状态执行器 |
+| 人格 system prompt | 待实施（见 `PERSONA-INJECTION.md`） |
 
 ---
 
@@ -131,26 +98,29 @@
 | 团队配置 | teams.json 管理创作者团队和 API Key 映射 |
 | 发布工作流 | 状态机管理发布流程（上传 → 审核 → 发布） |
 
-**当前状态：** 重构自旧 SmartAIMentor 黑客松后端，专注于发布功能。聊天和推荐功能已分别由 ClawCore 和 mentor-recsys 承担。
+**当前状态：** 重构自旧 SmartAIMentor 黑客松后端，专注于发布功能。聊天能力由智能体栈（Adapter/Hermes）承接，推荐由 mentor-recsys 承担。
 
 ---
 
-### mentor-recsys — 推荐服务
+### mentor-recsys — Creator Hotspot 推荐服务
 
-**技术栈：** Python · Flask 3.1 · Pydantic 2
+**技术栈：** Python 3.12+ · FastAPI · Pydantic 2 · SQLite + LanceDB
 
 **核心服务：**
 - **人设服务** — 从创作者数据提取 hashtag、关键词、内容支柱（城市探索、中国旅行、美食发现等）、受众画像
-- **趋势服务** — MockTrendAdapter 读取本地 JSON，设计为可替换真实数据源
-- **推荐服务** — 混合打分：关键词重叠 + 内容支柱匹配 + 地域相关性 + 热度（log 缩放）
+- **趋势服务** — 从 TikHub 同步热点（TikTok/Instagram/X），本地聚合
+- **推荐服务** — 混合打分：关键词重叠 + 内容支柱匹配 + 地域相关性 + 热度（log 缩放）；含个性化推荐引擎 + 新手兜底策略
+- **Creator Hotspot API** — `POST /api/v1/posts/recommend` + `GET /api/v1/market-info`（供 `creator-hotspot-api` skill 消费）
 
-**当前状态：** 推荐逻辑已实现，但使用 mock 趋势数据。人设构建支持从 JSON 文件导入。内存存储（重启后从磁盘加载）。
+**当前状态：** FastAPI 服务，SQLite（关系型）+ LanceDB（向量）双库，含 APScheduler 定时同步（每日热点同步 + 推送生成）。消费方：Insights 页 + `creator-hotspot-api` skill。
 
 ---
 
-### (已废弃) — 数据采集管线
+### 数据采集（由 mentor-recsys 承担）
 
-**技术栈：** Python · TikHub SDK · Google Gemini
+**技术栈：** Python · TikHub SDK · Google Gemini（Qwen 多模态）
+
+**流程：** TikHub 采集 TikTok/Instagram/X 热点与创作者数据 → Gemini/Qwen 多模态分析图片/视频内容 → 落库（SQLite + LanceDB）→ 供推荐与人设构建。
 
 **流程：** TikHub 采集 Instagram 用户资料和帖子 → Gemini 多模态分析图片/视频内容 → 输出结构化 JSON + CSV。
 
@@ -160,12 +130,14 @@
 
 ### user-post-skills-set — 智能体技能包
 
-两个 Codex/Claude 技能定义：
+Hermes 智能体加载的 **13 个官方 skill**（Claude Skills 协议，SKILL.md frontmatter），同步到 OpenViking 账户共享层（`viking://agent/skills`，所有用户可见）。
 
-| 技能 | 调用目标 |
-|------|----------|
-| `creator-hotspot-api` | mentor-recsys 的推荐和市场信息接口 |
-| `instagram-creator-fetch` | Instagram 数据采集 + Gemini 分析 |
+| 类别 | skill | 说明 |
+|------|-------|------|
+| 带脚本 | `creator-hotspot-api` | 调 mentor-recsys 推荐/市场信息（:8000） |
+| 带脚本 | `publish-to-social` | 社交发布（publish-service :58888） |
+| 带脚本 | `instagram-creator-fetch` | Instagram 采集 + Gemini 分析 |
+| 指令/知识型 | 其余 10 个 | 脚本/钩子/标签/封面/合规/视频拆解等，靠 Hermes 创作能力 |
 
 ---
 
@@ -200,20 +172,21 @@
 `mentoraix/server/core/ai/provider.ts` 实现：
 
 ```
-ClawCore（如果 CLAWCORE_BASE_URL 可达）
+Adapter 智能体（如果 CLAWCORE_BASE_URL=:8003 可达）
   → OrbitAI（如果 ORBITAI_API_KEY 有值）
     → DeepSeek（如果 DEEPSEEK_API_KEY 有值）
       → Mock（脚本化兜底回复）
 ```
 
-ClawCore 可用时走完整管线（记忆 prefetch → prompt 组装 → ReAct → 事实抽取），其他供应商只做简单对话。
+智能体可用时走完整管线（Hermes 执行 + OpenViking 记忆 + skill），其他供应商只做简单对话。
 
 ### 2. 文件持久化（非数据库）
 
 - mentoraixs：聊天历史 → `data/chat-history/{userId}.json`
 - publish-service：团队配置 → `backend/data/teams.json`，上传文件 → `backend/data/uploads/`
-- ClawCore：加密 SQLite（唯一使用数据库的组件）
-- mentor-recsys：内存 + 磁盘 JSON
+- adapter：会话映射 SQLite（`(user_id, client_sid) → hermes_sid`，重启不丢）
+- mentor-recsys：SQLite（关系型）+ LanceDB（向量）双库
+- OpenViking：多租户记忆持久化（会话/记忆/人格）
 
 ### 3. 前端数据仍是种子数据
 
@@ -221,7 +194,7 @@ publish-service 已取代旧后端。mentor-recsys 有真实推荐逻辑但未�
 
 ### 4. 发布后端已重构
 
-旧 SmartAIMentor（黑客松版，含聊天 + 发布 + 任务）已拆分为专注的 publish-service，使用 Bundle Social API 支持多平台发布。聊天功能由 ClawCore 承担。
+旧 SmartAIMentor（黑客松版，含聊天 + 发布 + 任务）已拆分为专注的 publish-service，使用 Bundle Social API 支持多平台发布。聊天功能由智能体栈（Adapter/Hermes）承担。
 
 ### 5. 无 Docker、无 Git Submodule
 
@@ -234,7 +207,7 @@ Shell clone + Makefile 编排，设计文档中预留了未来迁移到 Git Subm
 ### 聊天流程
 ```
 用户 → mentoraixs /api/chat → provider.ts
-  → ClawCore 可用? → SSE 流式（带记忆）
+  → Adapter(:8003) 可用? → SSE 流式（Hermes 执行 + OpenViking 记忆 + skill）
   → 否则 → OrbitAI/DeepSeek（OpenAI 兼容接口）
 ```
 
@@ -250,11 +223,18 @@ mentoraixs Insights 页 → mentor-recsys
   → 趋势推荐、帖子推荐、人设构建
 ```
 
+### 智能体 skill 流程
+```
+用户对话 → Adapter(:8003) → Hermes(:8002) 加载官方 skill
+  → 带脚本 skill 调后端取业务数据
+    ├── creator-hotspot-api → mentor-recsys (:8000)
+    └── publish-to-social   → publish-service (:58888)
+```
+
 ### 数据采集流程
 ```
-(已废弃) → TikHub API → Instagram 数据
-  → Gemini 多模态分析 → 结构化 JSON
-  → mentor-recsys 消费 → 人设构建 + 推荐
+TikHub API → TikTok/Instagram/X 数据 → Gemini/Qwen 多模态分析
+  → mentor-recsys 落库（SQLite+LanceDB） → 人设构建 + 推荐
 ```
 
 ---
@@ -267,14 +247,19 @@ mentoraixs Insights 页 → mentor-recsys
 |------|------|--------|
 | `MENTORAIX_API_BASE_URL` | mentoraixs → publish-service（默认 :58888） | mentoraixs |
 | `CLAWCORE_BASE_URL` | mentoraix → Adapter(:8003, ClawCore 兼容契约) | mentoraix |
-| `GEMINI_API_KEY` | Gemini API | mentor-recsys, mentoraixs, (已废弃) |
-| `ANTHROPIC_API_KEY` | Claude API | (已废弃, 原 ClawCore) |
-| `MOONSHOT_API_KEY` | Kimi/Moonshot API | (已废弃, 原 ClawCore) |
+| `HERMES_BASE_URL` | adapter → Hermes（:8002） | adapter |
+| `HERMES_API_KEY` | Hermes API key | adapter |
+| `OPENVIKING_ENDPOINT` | adapter → OpenViking（:1933） | adapter |
+| `OV_ROOT_KEY` | OpenViking root key | adapter |
+| `OV_ACCOUNT` | OpenViking 账户（默认 mentoraix） | adapter |
+| `GEMINI_API_KEY` | Gemini API | mentor-recsys, mentoraixs |
 | `OPENAI_API_KEY` | OpenAI API | mentoraix, Hermes |
 | `DEEPSEEK_API_KEY` | DeepSeek API | mentoraix |
 | `ORBITAI_API_KEY` | OrbitAI API | mentoraix |
-| `TIKHUB_API_KEY` | TikHub 数据采集 | mentoraix, (已废弃) |
+| `TIKHUB_API_KEY` | TikHub 数据采集 | mentor-recsys |
 | `BUNDLE_SOCIAL_API_KEY` | 社媒发布（Bundle Social） | publish-service |
+
+> `ANTHROPIC_API_KEY` / `MOONSHOT_API_KEY` 原属 ClawCore，随其下线已不再使用（保留仅为向后兼容）。
 
 ---
 

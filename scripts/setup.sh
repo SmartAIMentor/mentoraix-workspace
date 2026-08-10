@@ -25,14 +25,16 @@ LOG_DIR="$REPO_DIR/logs"
 ORG="SmartAIMentor"
 
 # 仓库列表: name = default_branch
+# agent-runtime-lab = 新 agent 栈编排仓（Hermes+OpenViking+Adapter），独立 git 仓库
 declare -A REPO_BRANCHES=(
   [mentoraixs]=Leroy
   [publish-service]=main
   [mentor-recsys]=main
   [user-post-skills-set]=main
+  [agent-runtime-lab]=main
 )
 
-REPO_NAMES=(mentoraixs publish-service mentor-recsys user-post-skills-set)
+REPO_NAMES=(mentoraixs publish-service mentor-recsys user-post-skills-set agent-runtime-lab)
 
 info()  { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 ok()    { echo -e "\033[1;32m[OK]\033[0m $*"; }
@@ -109,25 +111,19 @@ cmd_start() {
     set +a
   fi
 
-  # 1. publish-service 后端 (:58888)
-  if [ -f "$REPOS_ROOT/publish-service/backend/run.sh" ]; then
-    info "Starting publish-service backend on :58888..."
-    (cd "$REPOS_ROOT/publish-service" && bash backend/run.sh) > "$LOG_DIR/publish-service.log" 2>&1 &
-    echo "publish-service:$!" >> "$PID_FILE"
-    sleep 2
-    ok "publish-service backend started (PID $!)"
+  # ── 新 agent 栈后端（Hermes/OpenViking/Adapter + publish-service + mentor-recsys）──
+  # 统一委托给 agent-runtime-lab/hermes-clawcore-adapter/scripts/stack-up.sh
+  # 该脚本按依赖顺序拉起 5 个后端（openviking:1933 / hermes:8002 / adapter:8003 /
+  # publish-service:58888 / mentor-recsys:8000），已在跑的服务自动跳过，并做健康检查。
+  if [ -f "$REPOS_ROOT/agent-runtime-lab/hermes-clawcore-adapter/scripts/stack-up.sh" ]; then
+    info "Starting agent stack backends via stack-up.sh (5 services)..."
+    bash "$REPOS_ROOT/agent-runtime-lab/hermes-clawcore-adapter/scripts/stack-up.sh"
+    ok "agent stack backends started (see hermes-clawcore-adapter/logs/)"
+  else
+    warn "agent-runtime-lab not found at $REPOS_ROOT/agent-runtime-lab — 新 agent 栈后端未启动（前端的对话/会话将不可用）"
   fi
 
-  # 2. mentor-recsys (:8000)
-  if [ -f "$REPOS_ROOT/mentor-recsys/app/main.py" ]; then
-    info "Starting mentor-recsys on :8000..."
-    (cd "$REPOS_ROOT/mentor-recsys" && python3 -m app.main) > "$LOG_DIR/mentor-recsys.log" 2>&1 &
-    echo "mentor-recsys:$!" >> "$PID_FILE"
-    sleep 1
-    ok "mentor-recsys started (PID $!)"
-  fi
-
-  # 3. mentoraixs 前端 (:3000) — 最后启动
+  # ── mentoraixs 前端 (:3000) — 最后启动 ──
   if [ -f "$REPOS_ROOT/mentoraixs/package.json" ]; then
     info "Starting mentoraixs on :3000..."
     (cd "$REPOS_ROOT/mentoraixs" && pnpm dev) > "$LOG_DIR/mentoraixs.log" 2>&1 &
@@ -137,17 +133,24 @@ cmd_start() {
   fi
 
   ok "All services started. PIDs saved to .pids"
-  info "Logs: $LOG_DIR/"
+  info "Logs: $LOG_DIR/ (agent stack logs 在 hermes-clawcore-adapter/logs/)"
 }
 
 # --- stop ---
 cmd_stop() {
+  # 1. 停 agent 栈后端（委托 agent-runtime-lab stop.sh，覆盖 5 服务端口）
+  if [ -f "$REPOS_ROOT/agent-runtime-lab/hermes-clawcore-adapter/stop.sh" ]; then
+    info "Stopping agent stack backends (agent-runtime-lab/stop.sh)..."
+    bash "$REPOS_ROOT/agent-runtime-lab/hermes-clawcore-adapter/stop.sh" || true
+  fi
+
+  # 2. 停本地前台服务（mentoraixs 等）
   if [ ! -f "$PID_FILE" ]; then
-    warn "No .pids file found. Nothing to stop."
+    ok "No local services to stop (agent stack already handled above)."
     return
   fi
 
-  info "Stopping services..."
+  info "Stopping local services..."
   while IFS=: read -r name pid; do
     if kill -0 "$pid" 2>/dev/null; then
       kill "$pid"
@@ -169,9 +172,9 @@ case "${1:-help}" in
   stop)    cmd_stop ;;
   help|*)
     echo "Usage: $0 <clone|install|start|stop>"
-    echo "  clone   — git clone all 5 repos into repos/"
+    echo "  clone   — git clone all 6 repos into repos/"
     echo "  install — install dependencies for each repo"
-    echo "  start   — start all services in background"
-    echo "  stop    — stop all background services"
+    echo "  start   — start all backend services (agent stack + frontend)"
+    echo "  stop    — stop all services"
     ;;
 esac
