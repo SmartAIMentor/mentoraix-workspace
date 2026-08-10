@@ -162,7 +162,7 @@ A: agent 栈 5 个后端支持选择性启动：`SKIP=mentor-recsys bash agent-r
 
 - **[项目全景指南](docs/PROJECT_GUIDE.md)** — 架构拓扑、各仓库职责、AI 供应商链、数据流、设计决策。5 分钟读懂整个系统。
 - **[Agent 切换指南](docs/AGENT-CUTOVER.md)** — ClawCore → Hermes+OpenViking 的迁移说明与新服务接入方法。
-- **[M 人设注入方案](docs/PERSONA-INJECTION.md)** — 给新 agent 注入产品人格的待实施方案。
+- **[M 人设注入方案](docs/PERSONA-INJECTION.md)** — 给新 agent 注入产品人格的实现说明（✅ 已实现，含人格解析优先级与 REST 端点）。
 - **[设计文档](docs/superpowers/specs/)** — 各功能的设计 spec 和实现计划
 
 ## 子仓库列表

@@ -151,7 +151,7 @@ mcp_servers:
 - **AGPL 法务** ✅（已过）：OpenViking 是 AGPL-3.0，当前 arm's length(HTTP API) 使用安全。
 - **ClawCore 退役** ✅（已完成）：:8001 已下线，由新栈承接。
 - **生产化** ⏸：systemd/launchd 守护（自启+崩重启）、性能基线（commit/recall P95）。**注意**：后台 nohup 进程在非持久终端会随会话结束被回收，上线应配守护进程。
-- **M 人格注入** ⏸：见 [PERSONA-INJECTION.md](PERSONA-INJECTION.md)（待实施方案）。
+- **M 人格注入** ✅（已完成）：`_resolve_persona` 已注入 Hermes，见 [PERSONA-INJECTION.md](PERSONA-INJECTION.md)（实现说明，含优先级与 REST 端点）。
 
 ## FAQ
 | 问题 | 排查 |

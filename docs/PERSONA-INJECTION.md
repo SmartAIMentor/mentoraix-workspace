@@ -1,11 +1,29 @@
 # P0：给新 Agent 注入 M 人格（system prompt）方案
 
-> 状态：可执行方案（2026-08-07），待实施。
-> 这是 ClawCore→Hermes **完整替换的唯一行为缺口**——补完它，新栈行为就与旧的对齐。
+> 状态：**✅ 已实现**（2026-08-08 native-alignment 重构落地；本文件为历史方案记录）
+> 实际实现方式与方案略有出入（更强），见下方「实现现状」。这份文档保留作设计参考。
 
 ---
 
-## 问题
+## 实现现状（已落地，勿再按本方案实施）
+
+adapter `main.py` 已实现 `_resolve_persona()`，人格解析优先级：
+
+```
+OV per-user persona.md  >  frontend system_prompt (legacy)  >  DEFAULT_MATE_PERSONA
+```
+
+- `main.py:139` `_resolve_persona(user_id, frontend_prompt)` → 返回 `(persona_text, source)`
+- `main.py:362` `if persona: chat_body["system_message"] = persona` → 注入 Hermes 请求
+- 比原方案（仅 frontend 传 system_prompt）更强：支持 OV 每用户 persona + 平台默认兜底
+- 测试已覆盖（3 条全过）：`test_chat_with_ov_persona_injected` / `test_chat_default_persona_when_no_ov` / `test_persona_api_roundtrip`
+- 附加 REST 端点：`GET/PUT /api/v1/persona`（读写 OV 每用户 persona）
+
+> 下方为原始设计方案（2026-08-07），仅作历史参考。
+
+---
+
+## 问题（原始方案背景）
 
 新栈 adapter→Hermes **没注入 system prompt** → 新 agent 用 Hermes 默认人格，**不像产品里的"M"**，也无个性化。
 - 证据：adapter `main.py` 只发 `message`；Hermes session 用 `{}` 建（无 system_prompt）。

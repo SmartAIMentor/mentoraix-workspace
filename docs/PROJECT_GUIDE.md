@@ -79,7 +79,43 @@
 | FTS5 单库记忆 | OpenViking 多租户记忆（官方 SDK） |
 | 内置业务工具 | 各服务 MCP 接入（Hermes skill / MCP servers） |
 | ReAct LLM 循环 | Hermes 无状态执行器 |
-| 人格 system prompt | 待实施（见 `PERSONA-INJECTION.md`） |
+| 人格 system prompt | 已实现（adapter `_resolve_persona`：OV persona > frontend > 默认） |
+
+---
+
+### agent-runtime-lab — 新智能体栈（Hermes + OpenViking + Adapter）
+
+**技术栈：** Python 3.13 · FastAPI · 官方 `openviking_sdk` (0.1.5) · Hermes 无状态执行器
+
+> ClawCore 已 **decommissioned（下线）**。其 ClawCore 兼容契约（`/api/chat` SSE + `/api/sessions`）由 Adapter 在 `:8003` 提供，前端无感知切换。
+
+**核心原则：复用 OpenViking 官方原生能力，不自造轮子。**
+- 会话上下文、记忆、人格/角色全部交给 **OpenViking**（成熟官方开源项目）管理。
+- Hermes 仅作无状态执行器；Adapter 与其捆绑，提供对外 HTTP 契约。
+- 通过官方 `openviking_sdk.AsyncHTTPClient` 原生接口：`create_session / list_sessions / get_session / get_session_context / delete_session / commit_session / add_message / batch_add_messages / find / search / read / write / list_skills / find_skills / get_skill / add_skill`。
+
+**请求处理管线：**
+
+```
+请求进入（JWT 鉴权 → sub 作为 user_id，多租户隔离）
+  → 按 user_id 懒创建 SDK 客户端（各自 X-OpenViking-User 头）
+  → 解析人格（OV persona.md > 前端 system_prompt > 默认 Mate）
+  → 召回记忆 + 列出官方 skill + 重建历史（全部来自 OpenViking）
+  → 交给 Hermes 无状态生成回复（SSE 流式，system_message=persona）
+  → commit_session 归档，记忆提取由 OpenViking 原生后台完成
+```
+
+**鉴权与多租户：**
+- JWT HS256，issuer=`smartaimentor`、audience=`smartaimentor-api`（零信任，伪造 body.user_id 一律 401）。
+- OpenViking `auth_mode=trusted` + `root_api_key`，SDK 自动注入 `X-API-Key` / `X-OpenViking-Account` / `X-OpenViking-User` 头，实现多租户隔离。
+
+**人格注入（已实现）：** `_resolve_persona(user_id, frontend_prompt)`，优先级 `OV persona.md > 前端 system_prompt > 默认 Mate`；`chat_body["system_message"] = persona` 注入 Hermes。REST 端点 `GET/PUT /api/v1/persona`。
+
+**会话 title（方案 A）：** 官方 `CreateSessionRequest` 无 title/rename，title 是唯一非原生 UI 需求 → 存 Adapter 本地 SQLite（`session_mapping.title`）。
+
+**官方 skill：** 13 个 skill 存 OpenViking 账户共享层（`viking://agent/skills`），所有用户可见；adapter 每轮 `list_agent_skills` 注入 Hermes 上下文。
+
+**SSE 事件协议：** `turn.start` → `message.delta`(流式) → `message.complete` → `turn.end`
 
 ---
 
@@ -121,8 +157,6 @@
 **技术栈：** Python · TikHub SDK · Google Gemini（Qwen 多模态）
 
 **流程：** TikHub 采集 TikTok/Instagram/X 热点与创作者数据 → Gemini/Qwen 多模态分析图片/视频内容 → 落库（SQLite + LanceDB）→ 供推荐与人设构建。
-
-**流程：** TikHub 采集 Instagram 用户资料和帖子 → Gemini 多模态分析图片/视频内容 → 输出结构化 JSON + CSV。
 
 `GeminiMediaAnalyzer` 设计为可复用组件，未来可扩展到 TikTok、抖音、小红书。
 
