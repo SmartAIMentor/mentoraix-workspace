@@ -105,6 +105,8 @@
   → commit_session 归档，记忆提取由 OpenViking 原生后台完成
 ```
 
+> **✅ 已落盘实测确认（2026-08-10）**：会话/记忆/人格点/MD/skills 全部真实由 OpenViking 管控——`viking/mentoraix/user/{uid}/` 下 68 个用户目录各含 sessions/memories/skills/peers/resources/privacy，13 个官方 skill 完整落盘 `agent/skills/`；端到端实测新用户两轮对话信息真实留存并可跨轮召回；隔离实测跨租户零泄露。详见 `docs/openviking-source-of-truth-acceptance.html`。
+
 **鉴权与多租户：**
 - JWT HS256，issuer=`smartaimentor`、audience=`smartaimentor-api`（零信任，伪造 body.user_id 一律 401）。
 - OpenViking `auth_mode=trusted` + `root_api_key`，SDK 自动注入 `X-API-Key` / `X-OpenViking-Account` / `X-OpenViking-User` 头，实现多租户隔离。
