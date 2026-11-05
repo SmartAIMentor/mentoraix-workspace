@@ -119,6 +119,15 @@
 
 **SSE 事件协议：** `turn.start` → `message.delta`(流式) → `message.complete` → `turn.end`
 
+> **🔧 2026-11-05 升级与修复（OV 0.4.11 → 0.5.3 + adapter 两项关键修复，commit e7d8589）**
+>
+> 1. **OV keep-alive 间歇 404**：OV 服务端（0.4.11 与 0.5.3 均存在）在同一 HTTP 连接的第 2+ 个请求上 RAGFS stat 间歇失败（裸 `Resource not found`，首请求正常）。实测复用连接 `[200,404,404…]`、每次新连接全 200。修复：SDK client 官方 `extra_headers={"Connection": "close"}` 强制每请求新连接 + 裸 404 窄条件指数退避重试兜底（真 404 不重试）。
+> 2. **跨轮记忆丢失**：OV 0.5.3 `MemoryPolicy` 默认关闭 Working Memory，commit Phase 2 跳过 overview 摘要，`commit(keep_recent_count=0)` 后 `get_session_context` 全空。修复：commit 传官方 `CommitSessionOptions(enable_working_memory=True)`，每轮归档生成 WM 摘要注入下轮上下文。端到端实测两轮对话第二轮准确召回。
+> 3. **Embedding 提供商**：讯飞 MaaS 配额失效（403），已切换 ov.conf 到 Gitee（`Qwen3-Embedding-4B`，1024 维），setup.sh 的 dimensions 补丁已重打。
+> 4. **生产 .env**：adapter 生产启动要求 `hermes-clawcore-adapter/.env`（从 `.env.example` 复制，`JWT_SECRET` ≥32 字符 + `DEV_MODE=false`），Kaori 的 preflight 强制校验。
+>
+> 另：agent-runtime-lab 新增 **discord-agent-service**（Discord Interactions 边缘服务）、**记忆策略影子管道**、**Docker 六容器生产栈**（`docker-compose.production.yml`，Kaori 主导，09-20 起）。
+
 ---
 
 ### publish-service — 多平台发布后端
